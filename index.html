@@ -3,166 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload e Compartilhamento de Arquivos</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f4f4f4;
-        }
-
-        h1, h2 {
-            color: #333;
-        }
-
-        form, .download-section {
-            margin: 20px 0;
-        }
-
-        .download-section {
-            display: none;
-        }
-
-        .file-link {
-            display: block;
-            margin-top: 10px;
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-        }
-
-        .file-link:hover {
-            background-color: #45a049;
-        }
-
-        input[type="file"] {
-            margin: 10px 0;
-        }
-
-        .file-item {
-            margin: 10px 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .file-item label {
-            margin-left: 10px;
-        }
-
-        button {
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #007BFF;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-    </style>
+    <title>Upload e Download de Arquivos com Firebase</title>
 </head>
 <body>
-    <h1>Upload e Compartilhamento de Arquivos</h1>
+    <h1>Upload de Arquivos</h1>
+    
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Upload</button>
 
-    <form id="uploadForm">
-        <label for="fileInput">Selecione arquivos para compartilhar:</label>
-        <input type="file" id="fileInput" multiple>
-        <button type="submit">Enviar Arquivos</button>
-    </form>
+    <h2>Arquivos Disponíveis para Download</h2>
+    <div id="fileList"></div>
 
-    <div class="download-section" id="downloadSection">
-        <h2>Arquivos Compartilhados</h2>
-        <div id="fileList"></div>
-        <button id="downloadSelected">Baixar Arquivos Selecionados</button>
-        <button id="selectAll">Selecionar Todos</button>
-        <button id="deselectAll">Desmarcar Todos</button>
-    </div>
+    <!-- Firebase SDKs -->
+    <!-- Firebase App (base SDK) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+
+    <!-- Firebase Storage SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
 
     <script>
-        const uploadForm = document.getElementById('uploadForm');
-        const fileInput = document.getElementById('fileInput');
-        const fileList = document.getElementById('fileList');
-        const downloadSection = document.getElementById('downloadSection');
-        const downloadSelected = document.getElementById('downloadSelected');
-        const selectAllButton = document.getElementById('selectAll');
-        const deselectAllButton = document.getElementById('deselectAll');
-        let filesData = [];
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyDh-We-SNGOdjqBmt79Yuj19oRRvSG8zWI",
+            authDomain: "video-do-computador-e-notebook.firebaseapp.com",
+            projectId: "video-do-computador-e-notebook",
+            storageBucket: "video-do-computador-e-notebook.appspot.com",
+            messagingSenderId: "246060946539",
+            appId: "1:246060946539:web:5c4afc8b95b3441d8b4d2e"
+        };
 
-        uploadForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const files = Array.from(fileInput.files);
+        // Inicializar Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage();
 
-            if (files.length > 0) {
-                fileList.innerHTML = ''; // Limpa a lista antes de adicionar novos arquivos
-                filesData = []; // Reinicia os dados dos arquivos
+        // Função para fazer o upload do arquivo
+        function uploadFile() {
+            const file = document.getElementById('fileInput').files[0];
+            const storageRef = storage.ref('uploads/' + file.name);
 
-                files.forEach((file, index) => {
-                    const fileURL = URL.createObjectURL(file);
-                    filesData.push({ file, fileURL });
+            storageRef.put(file).then((snapshot) => {
+                alert('Upload concluído!');
+                listarArquivos();
+            });
+        }
 
-                    const fileItem = document.createElement('div');
-                    fileItem.classList.add('file-item');
-                    
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.id = `file-${index}`;
-                    checkbox.dataset.index = index;
+        // Função para listar os arquivos e gerar links de download
+        function listarArquivos() {
+            const storageRef = storage.ref('uploads/');
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = ''; // Limpa a lista anterior
 
-                    const label = document.createElement('label');
-                    label.setAttribute('for', `file-${index}`);
-                    label.textContent = file.name;
-
-                    fileItem.appendChild(checkbox);
-                    fileItem.appendChild(label);
-                    fileList.appendChild(fileItem);
+            storageRef.listAll().then((result) => {
+                result.items.forEach((fileRef) => {
+                    fileRef.getDownloadURL().then((url) => {
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.textContent = fileRef.name;
+                        a.download = fileRef.name;
+                        fileList.appendChild(a);
+                        fileList.appendChild(document.createElement('br'));
+                    });
                 });
-
-                downloadSection.style.display = 'block';
-            } else {
-                alert('Por favor, selecione arquivos primeiro.');
-            }
-        });
-
-        // Baixar arquivos selecionados
-        downloadSelected.addEventListener('click', function() {
-            const selectedCheckboxes = document.querySelectorAll('.file-item input[type="checkbox"]:checked');
-            
-            if (selectedCheckboxes.length === 0) {
-                alert('Nenhum arquivo selecionado.');
-                return;
-            }
-
-            selectedCheckboxes.forEach(checkbox => {
-                const index = checkbox.dataset.index;
-                const { file, fileURL } = filesData[index];
-                const a = document.createElement('a');
-                a.href = fileURL;
-                a.download = file.name;
-                a.click();
             });
-        });
+        }
 
-        // Selecionar todos os arquivos
-        selectAllButton.addEventListener('click', function() {
-            const checkboxes = document.querySelectorAll('.file-item input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = true;
-            });
-        });
-
-        // Desmarcar todos os arquivos
-        deselectAllButton.addEventListener('click', function() {
-            const checkboxes = document.querySelectorAll('.file-item input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                checkbox.checked = false;
-            });
-        });
+        // Listar arquivos ao carregar a página
+        window.onload = listarArquivos;
     </script>
 </body>
 </html>
