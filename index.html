@@ -4,13 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Upload e Download de Arquivos com Firebase</title>
+    <style>
+        .progress {
+            width: 100%;
+            background-color: #f3f3f3;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 20px;
+            color: white;
+        }
+
+        .message {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
     <h1>Upload de Múltiplos Arquivos</h1>
-    
+
     <!-- Permitir múltiplos arquivos com o atributo 'multiple' -->
     <input type="file" id="fileInput" multiple>
     <button onclick="uploadFiles()">Upload</button>
+
+    <!-- Barra de progresso -->
+    <div id="progressWrapper"></div>
+
+    <!-- Mensagens de status -->
+    <div id="statusMessage" class="message"></div>
 
     <h2>Arquivos Disponíveis para Download</h2>
     <div id="fileList"></div>
@@ -41,15 +68,44 @@
         function uploadFiles() {
             const files = document.getElementById('fileInput').files;
             const fileList = Array.from(files); // Converte em um array
+            const progressWrapper = document.getElementById('progressWrapper');
+            progressWrapper.innerHTML = ''; // Limpa qualquer progresso anterior
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.textContent = ''; // Limpa qualquer mensagem anterior
 
-            fileList.forEach((file) => {
+            fileList.forEach((file, index) => {
                 const storageRef = storage.ref('uploads/' + file.name);
 
-                storageRef.put(file).then((snapshot) => {
-                    alert('Upload de ' + file.name + ' concluído!');
+                // Criar barra de progresso para cada arquivo
+                const progressDiv = document.createElement('div');
+                progressDiv.classList.add('progress');
+                const progressBar = document.createElement('div');
+                progressBar.classList.add('progress-bar');
+                progressDiv.appendChild(progressBar);
+                progressWrapper.appendChild(progressDiv);
+
+                const uploadTask = storageRef.put(file);
+
+                // Acompanhar o progresso do upload
+                uploadTask.on('state_changed', (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    progressBar.style.width = progress + '%';
+                    progressBar.textContent = Math.round(progress) + '%';
+                }, (error) => {
+                    // Caso de erro
+                    console.error('Erro no upload:', error);
+                    statusMessage.textContent = 'Erro ao enviar ' + file.name + ': ' + error.message;
+                    statusMessage.style.color = 'red';
+                }, () => {
+                    // Upload concluído
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
                     listarArquivos(); // Atualiza a lista de arquivos
-                }).catch((error) => {
-                    console.error('Erro no upload: ', error);
+
+                    if (index === fileList.length - 1) {
+                        statusMessage.textContent = 'Todos os uploads foram concluídos com sucesso!';
+                        statusMessage.style.color = 'green';
+                    }
                 });
             });
         }
