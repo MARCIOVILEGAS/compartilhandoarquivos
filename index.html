@@ -15,7 +15,7 @@
     <h2>Arquivos Disponíveis para Download</h2>
     <div id="fileList"></div>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs via CDN -->
     <!-- Firebase App (base SDK) -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
 
@@ -34,8 +34,8 @@
         };
 
         // Inicializar Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const storage = firebase.storage();
+        firebase.initializeApp(firebaseConfig);
+        const storage = firebase.storage(); // Defina o storage após a inicialização do Firebase
 
         // Função para fazer upload de múltiplos arquivos
         function uploadFiles() {
@@ -48,6 +48,8 @@
                 storageRef.put(file).then((snapshot) => {
                     alert('Upload de ' + file.name + ' concluído!');
                     listarArquivos(); // Atualiza a lista de arquivos
+                }).catch((error) => {
+                    console.error('Erro no upload: ', error);
                 });
             });
         }
@@ -59,6 +61,13 @@
             fileListDiv.innerHTML = ''; // Limpa a lista anterior
 
             storageRef.listAll().then((result) => {
+                if (result.items.length === 0) {
+                    const noFilesMessage = document.createElement('p');
+                    noFilesMessage.textContent = 'Nenhum arquivo encontrado.';
+                    fileListDiv.appendChild(noFilesMessage);
+                    return;
+                }
+
                 result.items.forEach((fileRef) => {
                     fileRef.getDownloadURL().then((url) => {
                         const a = document.createElement('a');
@@ -67,8 +76,12 @@
                         a.download = fileRef.name;
                         fileListDiv.appendChild(a);
                         fileListDiv.appendChild(document.createElement('br'));
+                    }).catch((error) => {
+                        console.error('Erro ao obter URL de download: ', error);
                     });
                 });
+            }).catch((error) => {
+                console.error('Erro ao listar os arquivos: ', error);
             });
         }
 
